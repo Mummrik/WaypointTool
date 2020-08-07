@@ -1,59 +1,103 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 public class WaypointSystem : MonoBehaviour
 {
-    //TODO: Add the waypoint data and functions
-    [SerializeField] private List<Vector3> m_Waypoints;
-    [SerializeField] private bool m_LoopWaypoints;
+    [SerializeField] private bool loopWaypoints;
 
-    private Vector3 m_TargetPosition;
-    private int m_WaypointIndex;
+    private Vector3 targetPosition;
+    private int waypointIndex;
+    private Vector3 previewWaypoint;
+    private Vector3 previewTargetWaypoint;
+    private int previewWaypointIndex;
 
-    public bool LoopWaypoints { get => m_LoopWaypoints; set => m_LoopWaypoints = value; }
-
-    public List<Vector3> GetWaypoints() => m_Waypoints;
-
-    public void SetupWaypointSystem( in List<Vector3> waypoints, in bool loopWaypoints)
-    {
-        m_Waypoints = waypoints;
-        LoopWaypoints = loopWaypoints;
-        m_Waypoints[0] = gameObject.transform.position;
-        for (int i = 1; i < m_Waypoints.Count; i++)
-        {
-            Vector3 waypoint = m_Waypoints[i];
-            m_Waypoints[i] = waypoint + m_Waypoints[0];
-        }
-        m_TargetPosition = m_Waypoints[m_WaypointIndex];
-    }
+    [HideInInspector] public bool movePreview;
+    public List<Vector3> waypoints;
+    public bool LoopWaypoints { get => loopWaypoints; set => loopWaypoints = value; }
 
 
     private void Update()
     {
-        if (m_Waypoints != null)
+        if (waypoints != null)
         {
-            if (transform.position == m_TargetPosition)
+            if (transform.position == targetPosition)
             {
-                m_WaypointIndex++;
+                waypointIndex++;
                 if (LoopWaypoints)
                 {
-                    if (m_WaypointIndex > m_Waypoints.Count)
+                    if (waypointIndex > waypoints.Count)
                     {
-                        m_WaypointIndex = 0;
+                        waypointIndex = 0;
                     }
-                    m_TargetPosition = m_WaypointIndex < m_Waypoints.Count ? m_Waypoints[m_WaypointIndex] : m_Waypoints[0];
+                    targetPosition = waypointIndex < waypoints.Count ? waypoints[waypointIndex] : waypoints[0];
                 }
                 else
                 {
-                    if (m_WaypointIndex < m_Waypoints.Count)
+                    if (waypointIndex < waypoints.Count)
                     {
-                        m_TargetPosition = m_Waypoints[m_WaypointIndex];
+                        targetPosition = waypoints[waypointIndex];
                     }
                 }
             }
-            transform.position = Vector3.MoveTowards(transform.position, m_TargetPosition, 10f * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, targetPosition, 10f * Time.deltaTime);
         }
     }
+    private void OnDrawGizmosSelected()
+    {
+        for (int i = 0; i < waypoints.Count; i++)
+        {
+            if (i == 0)
+            {
+                Gizmos.color = Color.yellow;
+            }
+            else if (i == waypoints.Count - 1)
+            {
+                Gizmos.color = Color.green;
+            }
+            else
+            {
+                Gizmos.color = Color.magenta;
+            }
+            Gizmos.DrawSphere(waypoints[i], .05f);
+            Handles.Label(waypoints[i] + Vector3.up * 0.33f, $"Waypoint [{i}]");
 
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawLine(waypoints[i], i < waypoints.Count - 1 ? waypoints[i + 1] : LoopWaypoints ? waypoints[0] : waypoints[i]);
+        }
+
+        if (movePreview && waypoints.Count > 0)
+        {
+            if (previewWaypoint == previewTargetWaypoint)
+            {
+                previewWaypointIndex++;
+                if (LoopWaypoints)
+                {
+                    if (previewWaypointIndex > waypoints.Count)
+                    {
+                        previewWaypointIndex = 0;
+                    }
+                    previewTargetWaypoint = previewWaypointIndex < waypoints.Count ? waypoints[previewWaypointIndex] : waypoints[0];
+                }
+                else
+                {
+                    if (previewWaypointIndex < waypoints.Count)
+                    {
+                        previewTargetWaypoint = waypoints[previewWaypointIndex];
+                    }
+                }
+            }
+            previewWaypoint = Vector3.MoveTowards(previewWaypoint, previewTargetWaypoint, 0.01f);
+            Gizmos.color = Color.blue;
+            Gizmos.DrawSphere(previewWaypoint, .07f);
+        }
+
+    }
+    public void ResetPreview()
+    {
+        if (waypoints.Count == 0) { return; }
+        previewWaypointIndex = 0;
+        previewWaypoint = waypoints[previewWaypointIndex];
+        previewTargetWaypoint = waypoints[previewWaypointIndex];
+    }
 }
